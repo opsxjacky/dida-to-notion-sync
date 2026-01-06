@@ -32,9 +32,17 @@ jobs:
           EOF
       
       - name: Create .token file
+        env:
+          DIDA_TOKEN: ${{ secrets.DIDA_TOKEN }}
         run: |
-          echo '${{ secrets.DIDA_TOKEN }}' > .token
+          printf '%s' "$DIDA_TOKEN" > .token
       
+      - name: Verify token file
+        run: |
+          echo "Token file exists: $(test -f .token && echo 'yes' || echo 'no')"
+          echo "Token file size: $(wc -c < .token) bytes"
+          echo "Token file is valid JSON: $(cat .token | jq -e . > /dev/null 2>&1 && echo 'yes' || echo 'no')"
+
       - name: Build
         run: go build -o dida-sync .
       
