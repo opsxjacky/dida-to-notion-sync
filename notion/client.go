@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -56,7 +57,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("Notion API error: %s, body: %s", resp.Status, string(respBody))

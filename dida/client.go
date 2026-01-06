@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -87,7 +87,7 @@ func (c *Client) doRequestDebug(ctx context.Context, method, path string, result
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Printf("[DEBUG] API Response for %s:\n%s\n\n", path, string(body))
 
 	if resp.StatusCode != http.StatusOK {
@@ -156,8 +156,8 @@ func (c *Client) GetTask(ctx context.Context, projectID, taskID string) (*Task, 
 func (c *Client) UpdateTaskStatus(ctx context.Context, projectID, taskID string, status int) error {
 	// 构建更新任务的请求体
 	task := Task{
-		ID:       taskID,
-		Status:   status,
+		ID:        taskID,
+		Status:    status,
 		ProjectID: projectID,
 	}
 

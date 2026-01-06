@@ -337,6 +337,7 @@ func extractStatusFromPage(page notion.Page) (string, bool) {
 // 1. 获取 Notion 数据库中的所有页面
 // 2. 与 TickTick 任务进行比较
 // 3. 如果 Notion 显示任务已完成但 TickTick 中未完成，则更新 TickTick
+// 4. 如果任务在 Notion 中存在但在 TickTick 中不存在（已被删除或完成），则在 Notion 中标记为完成
 func markCompletedTasks(ctx context.Context, notionClient *notion.Client, didaClient *dida.Client, tickTickTasks []dida.Task) int {
 	// 获取 Notion 数据库中的所有页面
 	notionPages, err := notionClient.GetAllPages(ctx)
@@ -361,24 +362,42 @@ func markCompletedTasks(ctx context.Context, notionClient *notion.Client, didaCl
 
 	completedCount := 0
 
-	// 检查 Notion 状态是否需要同步到 TickTick
+	// 检查 Notion 状态是否需要同步
 	for notionTaskID, notionPage := range notionTaskMap {
-		tickTickTask, exists := tickTickTaskMap[notionTaskID]
-		if !exists {
-			// 任务在 Notion 中存在但在 TickTick 中不存在
-			// 可能是因为它已经在 TickTick 中被删除或完成
+		notionStatus, statusExists := extractStatusFromPage(notionPage)
+		if !statusExists {
 			continue
 		}
 
-		notionStatus, exists := extractStatusFromPage(notionPage)
-		if !exists {
+		notionCompleted := notionStatus == "完成"
+
+		tickTickTask, existsInTickTick := tickTickTaskMap[notionTaskID]
+		if !existsInTickTick {
+			// 任务在 Notion 中存在但在 TickTick 中不存在
+			// 说明该任务已经在滴答清单中被删除或完成
+			// 在 Notion 中标记该任务为完成
+			if !notionCompleted {
+				props := map[string]interface{}{
+					"状态": map[string]interface{}{
+						"status": map[string]interface{}{
+							"name": "完成",
+						},
+					},
+				}
+				_, err := notionClient.UpdatePage(ctx, notionPage.ID, props)
+				if err != nil {
+					fmt.Printf("在 Notion 中标记完成失败: %s - %v\n", notionPage.ID, err)
+				} else {
+					fmt.Printf("已在 Notion 中标记完成（滴答清单中已不存在）\n")
+					completedCount++
+				}
+				time.Sleep(350 * time.Millisecond)
+			}
 			continue
 		}
 
 		// 同步 Notion 完成状态到 TickTick
 		tickTickCompleted := tickTickTask.Status == 2
-		notionCompleted := notionStatus == "完成"
-
 		if notionCompleted && !tickTickCompleted {
 			err := didaClient.UpdateTaskStatus(ctx, tickTickTask.ProjectID, tickTickTask.ID, 2)
 			if err != nil {

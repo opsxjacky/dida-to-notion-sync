@@ -5,10 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 )
 
@@ -68,7 +67,7 @@ func (o *OAuth) ExchangeToken(ctx context.Context, code string) (*TokenResponse,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
 		return nil, fmt.Errorf("token exchange failed: %s, body: %s", resp.Status, string(body))
 	}
 
@@ -100,12 +99,12 @@ func (o *OAuth) SaveToken(filename string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, data, 0600)
+	return ioutil.WriteFile(filename, data, 0600)
 }
 
 // LoadToken 从文件加载 token
 func (o *OAuth) LoadToken(filename string) error {
-	data, err := os.ReadFile(filename)
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
