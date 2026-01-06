@@ -1,0 +1,42 @@
+name: Dida to Notion Sync
+
+on:
+  # 手动触发
+  workflow_dispatch:
+  
+  # 定时触发（每天早上8点 UTC+8，即 UTC 0点）
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          DIDA_CLIENT_ID=${{ secrets.DIDA_CLIENT_ID }}
+          DIDA_CLIENT_SECRET=${{ secrets.DIDA_CLIENT_SECRET }}
+          DIDA_REDIRECT_URL=http://localhost:8080/callback
+          NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID=${{ secrets.NOTION_DATABASE_ID }}
+          EOF
+      
+      - name: Create .token file
+        run: |
+          echo '${{ secrets.DIDA_TOKEN }}' > .token
+      
+      - name: Build
+        run: go build -o dida-sync .
+      
+      - name: Run sync
+        run: ./dida-sync
